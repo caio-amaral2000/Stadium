@@ -1,0 +1,68 @@
+﻿@using RabbitMQ.Client;
+@using System.Text;
+
+@page "/weather"
+@attribute [StreamRendering]
+
+<PageTitle>Choose a stadium seat</PageTitle>
+
+<form method="post" @onsubmit="Submit" @formname="seat-form">
+    <AntiforgeryToken />
+    <div>
+        <label>
+            Identifier:
+            <InputText @bind-Value="Model!.Id" />
+        </label>
+    </div>gggg
+    <div>
+        <button type="submit">Submit</button>
+    </div>
+</form>
+    
+
+@code {
+    [SupplyParameterFromForm]
+    public Starship? Model { get; set; }
+
+    protected override void OnInitialized() => Model ??= new();
+
+    private void Submit()
+    {
+        var body = Encoding.UTF8.GetBytes(Model.Id);
+
+        this.Channel.BasicPublish(exchange: string.Empty,
+                             routingKey: "hello",
+                             basicProperties: null,
+                             body: body);
+        Console.WriteLine($" [x] Sent {Model.Id}");
+    }
+
+    private IModel channel;
+    public IModel Channel
+    {
+        get
+        {
+            if(this.channel == null)
+            {
+                var factory = new ConnectionFactory { HostName = "localhost" };
+                var connection = factory.CreateConnection();
+                var channel = connection.CreateModel();
+
+                channel.QueueDeclare(queue: "hello",
+                                     durable: false,
+                                     exclusive: false,
+                                     autoDelete: false,
+                                     arguments: null);
+
+                this.channel = channel;
+            }
+            return this.channel;
+        }
+    }
+
+    public class Starship
+    {
+        public string? Id { get; set; }
+    }
+
+}
